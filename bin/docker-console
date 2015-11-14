@@ -1,0 +1,62 @@
+#!/usr/bin/env ruby
+require 'ripl'
+require 'ripl/shell_commands'
+require 'ripl/color_result'
+require 'ripl/color_streams'
+require 'ripl/commands'
+require 'ripl/rocket'
+require 'ripl/multi_line'
+require 'ripl/auto_indent'
+require 'docker'
+
+Ripl.config[:multi_line_prompt] = ' > '
+Ripl.config[:color_streams_stdout] = :light_blue
+Ripl.config[:color_streams_stderr] = :light_red
+
+Ripl.config[:prompt] = lambda {" > " }
+
+# Define plugins, load files, etc...
+
+def human_size(size)
+  if size>1000*1000
+    return "#{(size/1000.0/1000.0*10).to_i/10.0} MB"
+  elsif size>1000
+    return "#{(size/1000.0*10).to_i/10.0} KB"
+  else
+    return "#{size} B"
+  end
+end
+
+class Dodolook
+ def help
+   puts "xiaomi noops blog"
+ end
+ def name
+   "wilbur"
+ end
+ def cd(url)
+   Docker.url = url
+ end
+ def li
+   images = Docker::Image.all
+   images.each do |img|
+     img.info["RepoTags"].each do |rt|
+       repo,tag = rt.split(":")
+       repo=repo+" "*(16-repo.length)
+       tag=tag+" "*(16-tag.length)
+       puts img.id[0..11]+"\t"+repo+"\t"+tag+"\t"+human_size(img.info["VirtualSize"])+"\n"
+     end
+   end
+   return images.count
+ end
+ def lc
+   Docker::Container.all
+ end
+  def lca
+    Docker::Container.all(:all=>true)
+  end
+end
+dodo = Dodolook.new
+
+version = "1.0.3"
+Ripl.start :binding => dodo.instance_eval{ binding }
