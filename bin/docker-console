@@ -4,18 +4,12 @@ require 'ripl/shell_commands'
 require 'ripl/color_result'
 require 'ripl/color_streams'
 require 'ripl/commands'
-require 'ripl/rocket'
-require 'ripl/multi_line'
-require 'ripl/auto_indent'
+require './ripl/like_shell'
 require 'docker'
 
-Ripl.config[:multi_line_prompt] = ' > '
 Ripl.config[:color_streams_stdout] = :light_blue
 Ripl.config[:color_streams_stderr] = :light_red
-
 Ripl.config[:prompt] = lambda {" > " }
-
-# Define plugins, load files, etc...
 
 def human_size(size)
   if size>1000*1000
@@ -27,13 +21,7 @@ def human_size(size)
   end
 end
 
-class Dodolook
- def help
-   puts "xiaomi noops blog"
- end
- def name
-   "wilbur"
- end
+class DockerConsole
  def cd(url)
    Docker.url = url
  end
@@ -47,7 +35,7 @@ class Dodolook
        puts img.id[0..11]+"\t"+repo+"\t"+tag+"\t"+human_size(img.info["VirtualSize"])+"\n"
      end
    end
-   return images.count
+   return "Total #{images.count} images."
  end
  def lc
    Docker::Container.all
@@ -56,7 +44,7 @@ class Dodolook
     Docker::Container.all(:all=>true)
   end
 end
-dodo = Dodolook.new
+dc = DockerConsole.new
 
-version = "1.0.3"
-Ripl.start :binding => dodo.instance_eval{ binding }
+version = "0.0.1"
+Ripl.start :binding => dc.instance_eval{ binding }
