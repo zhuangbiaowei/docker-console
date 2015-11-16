@@ -48,9 +48,14 @@ def format_container(list)
     status = format_text(con.info["Status"],20)
     name = con.info["Names"][0]
     name = format_text(name,20)
-    con.info["Ports"].each do |port|
-      port_str = "#{port["IP"]}:#{port["PrivatePort"]}->#{port["PublicPort"]}/#{port["Type"]}"
-      puts id+"\t"+img+"\t"+name+"\t"+cmd+"\t"+status+"\t"+port_str
+    ports = con.info["Ports"]
+    if ports.size>0
+      ports.each do |port|
+        port_str = "#{port["IP"]}:#{port["PrivatePort"]}->#{port["PublicPort"]}/#{port["Type"]}"
+        puts id+"\t"+img+"\t"+name+"\t"+cmd+"\t"+status+"\t"+port_str
+      end
+    else
+      puts id+"\t"+img+"\t"+name+"\t"+cmd+"\t"+status
     end
   end
 end
