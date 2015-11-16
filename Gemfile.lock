@@ -27,6 +27,7 @@ PLATFORMS
 
 DEPENDENCIES
   docker-api
+  json
   ripl
   ripl-color_result
   ripl-color_streams

@@ -7,6 +7,7 @@ require 'ripl/color_streams'
 require 'ripl/commands'
 require './ripl/like_shell'
 require 'docker'
+require 'json'
 
 Ripl.config[:color_streams_stdout] = :light_blue
 Ripl.config[:color_streams_stderr] = :light_red
@@ -65,6 +66,20 @@ class DockerConsole
     Docker.url = url
     "Connected Docker: #{url}"
   end
+  def load_machines config_dir
+    @docker_machine_data = config_dir
+  end
+  def lm
+    puts "#{format_text("Name",20)}\t#{format_text("URL",30)}"
+    machines = `ls #{@docker_machine_data}`.split("\n")
+    machines.each do |machine|
+      f = File.open(File.expand_path(@docker_machine_data)+"/"+machine+"/config.json","r")
+      data = f.read
+      json = JSON.parse(data)
+      puts format_text(machine,20)+"\t"+format_text("tcp://"+json["Driver"]["IPAddress"]+":2376",30)
+    end
+    return "Total #{machines.count} machines."
+  end
   def li
     list = Docker::Image.all
     format_image(list)
@@ -83,6 +98,8 @@ class DockerConsole
 end
 
 dc = DockerConsole.new
+dc.load_machines "~/.docker/machine/machines"
 
 version = "0.0.1"
+
 Ripl.start :binding => dc.instance_eval{ binding }
