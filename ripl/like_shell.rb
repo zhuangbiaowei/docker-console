@@ -1,7 +1,5 @@
-require 'ripl'
-
-module Ripl::ReadlineShell
-  def get_input2
+module Ripl::Readline
+  def get_input
     input = Readline.readline prompt, true
     if input.include?(" ")
       arr = input.split(" ")
@@ -12,4 +10,4 @@ module Ripl::ReadlineShell
   end
 end
 
-Ripl::Shell.include Ripl::ReadlineShell
+Ripl::Shell.include Ripl::Readline

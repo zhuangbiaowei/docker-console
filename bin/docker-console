@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 require 'ripl'
+require 'ripl/readline'
 require 'ripl/shell_commands'
 require 'ripl/color_result'
 require 'ripl/color_streams'
@@ -9,7 +10,7 @@ require 'docker'
 
 Ripl.config[:color_streams_stdout] = :light_blue
 Ripl.config[:color_streams_stderr] = :light_red
-Ripl.config[:prompt] = lambda {" > " }
+Ripl.config[:prompt] = lambda {"#{Docker.url} > " }
 
 def human_size(size)
   if size>1000*1000
@@ -21,29 +22,61 @@ def human_size(size)
   end
 end
 
-class DockerConsole
- def cd(url)
-   Docker.url = url
- end
- def li
-   images = Docker::Image.all
-   images.each do |img|
-     img.info["RepoTags"].each do |rt|
-       repo,tag = rt.split(":")
-       repo=repo+" "*(16-repo.length)
-       tag=tag+" "*(16-tag.length)
-       puts img.id[0..11]+"\t"+repo+"\t"+tag+"\t"+human_size(img.info["VirtualSize"])+"\n"
-     end
-   end
-   return "Total #{images.count} images."
- end
- def lc
-   Docker::Container.all
- end
-  def lca
-    Docker::Container.all(:all=>true)
+def format_text(str,len)
+  str = str[0..len-3]+".." if str.length > len
+  str+" "*(len-str.length)
+end
+
+def format_image(list)
+  puts "#{format_text("ID",8)}\t#{format_text("Image",16)}\t#{format_text("Tag",16)}\t#{format_text("VSize",20)}"
+  list.each do |img|
+    img.info["RepoTags"].each do |rt|
+      repo,tag = rt.split(":")
+      repo=format_text(repo,16)
+      tag=format_text(tag,16)
+      puts img.id[0..11]+"\t"+repo+"\t"+tag+"\t"+human_size(img.info["VirtualSize"])+"\n"
+    end
   end
 end
+
+def format_container(list)
+  puts "#{format_text("ID",8)}\t#{format_text("Image",20)}\t#{format_text("Name",20)}\t#{format_text("Command",30)}\t#{format_text("Status",20)}\tPort"
+  list.each do |con|
+    id = format_text(con.id[0..7],8)
+    img = format_text(con.info["Image"],20)
+    cmd = format_text(con.info["Command"],30)
+    status = format_text(con.info["Status"],20)
+    name = con.info["Names"][0]
+    name = format_text(name,20)
+    con.info["Ports"].each do |port|
+      port_str = "#{port["IP"]}:#{port["PrivatePort"]}->#{port["PublicPort"]}/#{port["Type"]}"
+      puts id+"\t"+img+"\t"+name+"\t"+cmd+"\t"+status+"\t"+port_str
+    end
+  end
+end
+
+class DockerConsole
+  def cd(url)
+    Docker.url = url
+    "Connected Docker: #{url}"
+  end
+  def li
+    list = Docker::Image.all
+    format_image(list)
+    return "Total #{list.count} images."
+  end
+  def lc
+    list = Docker::Container.all
+    format_container(list)
+    return "Total #{list.count} containers."
+  end
+  def lca
+    list = Docker::Container.all(:all=>true)
+    format_container(list)
+    return "Total #{list.count} containers."
+  end
+end
+
 dc = DockerConsole.new
 
 version = "0.0.1"
