@@ -62,21 +62,37 @@ def format_container(list)
 end
 
 class DockerConsole
-  def cd(url)
-    Docker.url = url
-    "Connected Docker: #{url}"
+  def help
+    puts "cm: connect machine\n"+
+    "lm: list machines\n"+
+    "li: list images\n"+
+    "lc: list containers\n"+
+    "lca: list all containers"
+    return nil
+  end
+  def cm(url)
+    if url.to_i.to_s.length==url.length
+      Docker.url = @machines[url.to_i]
+    else
+      Docker.url = url
+    end
+    "Connected Docker: #{Docker.url}"
   end
   def load_machines config_dir
     @docker_machine_data = config_dir
   end
   def lm
-    puts "#{format_text("Name",20)}\t#{format_text("URL",30)}"
+    @machines = []
+    puts "Number\t#{format_text("Name",20)}\t#{format_text("URL",30)}"
     machines = `ls #{@docker_machine_data}`.split("\n")
+    num = 0
     machines.each do |machine|
       f = File.open(File.expand_path(@docker_machine_data)+"/"+machine+"/config.json","r")
       data = f.read
       json = JSON.parse(data)
-      puts format_text(machine,20)+"\t"+format_text("tcp://"+json["Driver"]["IPAddress"]+":2376",30)
+      @machines << "tcp://"+json["Driver"]["IPAddress"]+":2376"
+      puts num.to_s+"\t"+format_text(machine,20)+"\t"+format_text("tcp://"+json["Driver"]["IPAddress"]+":2376",30)
+      num = num + 1
     end
     return "Total #{machines.count} machines."
   end
@@ -94,6 +110,65 @@ class DockerConsole
     list = Docker::Container.all(:all=>true)
     format_container(list)
     return "Total #{list.count} containers."
+  end
+  def run_rm(img,cmd=nil)
+    if cmd==nil
+      cmd = []
+    elsif cmd.class == String
+      cmd = [cmd]
+    end
+    container = Docker::Container.create('Image' => img, 'Cmd' => cmd)
+    container.start
+    container = Docker::Container.get(container.id)
+    while container.info["State"]["Status"]=="running"
+      sleep 1
+      container = Docker::Container.get(container.id)
+    end
+    puts container.logs(stdout: true,stderr: true)
+    container.stop
+    container.kill
+    container.delete(:force => true)
+  end
+  def run(img,cmd=nil)
+    if cmd==nil
+      cmd = []
+    elsif cmd.class == String
+      cmd = [cmd]
+    end
+    container = Docker::Container.create('Image' => img, 'Cmd' => cmd)
+    container.start
+  end
+  def mrun(img,cmd=nil)
+    if cmd==nil
+      cmd = []
+    elsif cmd.class == String
+      cmd = [cmd]
+    end
+    url = Docker.url
+    @machines.each do |ip|
+      Docker.url = ip
+      container = Docker::Container.create('Image' => img, 'Cmd' => cmd)
+      container.start
+    end
+    Docker.url = url
+    return "Run command at #{@machines.count} machines."
+  end
+  def sm(name="*",label="*")
+    @machines = []
+    puts "Number\t#{format_text("Name",20)}\t#{format_text("URL",30)}"
+    machines = `ls #{@docker_machine_data}`.split("\n")
+    num = 0
+    machines.each do |machine|
+      f = File.open(File.expand_path(@docker_machine_data)+"/"+machine+"/config.json","r")
+      data = f.read
+      json = JSON.parse(data)
+      if (name=="*" || machine.include?(name))  && (label=="*" || json["HostOptions"]["Labels"].include?("label"))
+        @machines << "tcp://"+json["Driver"]["IPAddress"]+":2376"
+        puts num.to_s+"\t"+format_text(machine,20)+"\t"+format_text("tcp://"+json["Driver"]["IPAddress"]+":2376",30)
+        num = num + 1
+      end
+    end
+    return "Total #{machines.count} machines."
   end
 end
 
