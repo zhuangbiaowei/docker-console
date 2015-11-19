@@ -29,11 +29,12 @@ def format_text(str,len)
 end
 
 def format_image(list)
-  puts "#{format_text("ID",8)}\t#{format_text("Image",16)}\t#{format_text("Tag",16)}\t#{format_text("VSize",20)}"
+  puts "#{format_text("ID",8)}\t#{format_text("Image",60)}\t#{format_text("Tag",16)}\t#{format_text("VSize",20)}"
   list.each do |img|
     img.info["RepoTags"].each do |rt|
-      repo,tag = rt.split(":")
-      repo=format_text(repo,16)
+      repo = rt.split(":")[0..-2].join(":")
+      tag = rt.split(":")[-1]
+      repo=format_text(repo,60)
       tag=format_text(tag,16)
       puts img.id[0..11]+"\t"+repo+"\t"+tag+"\t"+human_size(img.info["VirtualSize"])+"\n"
     end
