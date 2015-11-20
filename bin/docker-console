@@ -1,175 +1,30 @@
 #!/usr/bin/env ruby
+require 'json'
+require 'docker'
 require 'ripl'
 require 'ripl/readline'
 require 'ripl/shell_commands'
 require 'ripl/color_result'
 require 'ripl/color_streams'
 require 'ripl/commands'
-require './ripl/like_shell'
-require 'docker'
-require 'json'
+
+require './lib/ripl/like_shell'
+require './lib/function/format'
+require './lib/function/run_container'
+require './lib/command/help'
+require './lib/command/machine'
+require './lib/command/image'
+require './lib/command/container'
 
 Ripl.config[:color_streams_stdout] = :light_blue
 Ripl.config[:color_streams_stderr] = :light_red
 Ripl.config[:prompt] = lambda {"#{Docker.url} > " }
 
-def human_size(size)
-  if size>1000*1000
-    return "#{(size/1000.0/1000.0*10).to_i/10.0} MB"
-  elsif size>1000
-    return "#{(size/1000.0*10).to_i/10.0} KB"
-  else
-    return "#{size} B"
-  end
-end
-
-def format_text(str,len)
-  str = str[0..len-3]+".." if str.length > len
-  str+" "*(len-str.length)
-end
-
-def format_image(list)
-  puts "#{format_text("ID",8)}\t#{format_text("Image",16)}\t#{format_text("Tag",16)}\t#{format_text("VSize",20)}"
-  list.each do |img|
-    img.info["RepoTags"].each do |rt|
-      repo,tag = rt.split(":")
-      repo=format_text(repo,16)
-      tag=format_text(tag,16)
-      puts img.id[0..11]+"\t"+repo+"\t"+tag+"\t"+human_size(img.info["VirtualSize"])+"\n"
-    end
-  end
-end
-
-def format_container(list)
-  puts "#{format_text("ID",8)}\t#{format_text("Image",20)}\t#{format_text("Name",20)}\t#{format_text("Command",30)}\t#{format_text("Status",20)}\tPort"
-  list.each do |con|
-    id = format_text(con.id[0..7],8)
-    img = format_text(con.info["Image"],20)
-    cmd = format_text(con.info["Command"],30)
-    status = format_text(con.info["Status"],20)
-    name = con.info["Names"][0]
-    name = format_text(name,20)
-    ports = con.info["Ports"]
-    if ports.size>0
-      ports.each do |port|
-        port_str = "#{port["IP"]}:#{port["PrivatePort"]}->#{port["PublicPort"]}/#{port["Type"]}"
-        puts id+"\t"+img+"\t"+name+"\t"+cmd+"\t"+status+"\t"+port_str
-      end
-    else
-      puts id+"\t"+img+"\t"+name+"\t"+cmd+"\t"+status
-    end
-  end
-end
-
 class DockerConsole
-  def help
-    puts "cm: connect machine\n"+
-    "lm: list machines\n"+
-    "li: list images\n"+
-    "lc: list containers\n"+
-    "lca: list all containers"
-    return nil
-  end
-  def cm(url)
-    if url.to_i.to_s.length==url.length
-      Docker.url = @machines[url.to_i]
-    else
-      Docker.url = url
-    end
-    "Connected Docker: #{Docker.url}"
-  end
-  def load_machines config_dir
-    @docker_machine_data = config_dir
-  end
-  def lm
-    @machines = []
-    puts "Number\t#{format_text("Name",20)}\t#{format_text("URL",30)}"
-    machines = `ls #{@docker_machine_data}`.split("\n")
-    num = 0
-    machines.each do |machine|
-      f = File.open(File.expand_path(@docker_machine_data)+"/"+machine+"/config.json","r")
-      data = f.read
-      json = JSON.parse(data)
-      @machines << "tcp://"+json["Driver"]["IPAddress"]+":2376"
-      puts num.to_s+"\t"+format_text(machine,20)+"\t"+format_text("tcp://"+json["Driver"]["IPAddress"]+":2376",30)
-      num = num + 1
-    end
-    return "Total #{machines.count} machines."
-  end
-  def li
-    list = Docker::Image.all
-    format_image(list)
-    return "Total #{list.count} images."
-  end
-  def lc
-    list = Docker::Container.all
-    format_container(list)
-    return "Total #{list.count} containers."
-  end
-  def lca
-    list = Docker::Container.all(:all=>true)
-    format_container(list)
-    return "Total #{list.count} containers."
-  end
-  def run_rm(img,cmd=nil)
-    if cmd==nil
-      cmd = []
-    elsif cmd.class == String
-      cmd = [cmd]
-    end
-    container = Docker::Container.create('Image' => img, 'Cmd' => cmd)
-    container.start
-    container = Docker::Container.get(container.id)
-    while container.info["State"]["Status"]=="running"
-      sleep 1
-      container = Docker::Container.get(container.id)
-    end
-    puts container.logs(stdout: true,stderr: true)
-    container.stop
-    container.kill
-    container.delete(:force => true)
-  end
-  def run(img,cmd=nil)
-    if cmd==nil
-      cmd = []
-    elsif cmd.class == String
-      cmd = [cmd]
-    end
-    container = Docker::Container.create('Image' => img, 'Cmd' => cmd)
-    container.start
-  end
-  def mrun(img,cmd=nil)
-    if cmd==nil
-      cmd = []
-    elsif cmd.class == String
-      cmd = [cmd]
-    end
-    url = Docker.url
-    @machines.each do |ip|
-      Docker.url = ip
-      container = Docker::Container.create('Image' => img, 'Cmd' => cmd)
-      container.start
-    end
-    Docker.url = url
-    return "Run command at #{@machines.count} machines."
-  end
-  def sm(name="*",label="*")
-    @machines = []
-    puts "Number\t#{format_text("Name",20)}\t#{format_text("URL",30)}"
-    machines = `ls #{@docker_machine_data}`.split("\n")
-    num = 0
-    machines.each do |machine|
-      f = File.open(File.expand_path(@docker_machine_data)+"/"+machine+"/config.json","r")
-      data = f.read
-      json = JSON.parse(data)
-      if (name=="*" || machine.include?(name))  && (label=="*" || json["HostOptions"]["Labels"].include?("label"))
-        @machines << "tcp://"+json["Driver"]["IPAddress"]+":2376"
-        puts num.to_s+"\t"+format_text(machine,20)+"\t"+format_text("tcp://"+json["Driver"]["IPAddress"]+":2376",30)
-        num = num + 1
-      end
-    end
-    return "Total #{machines.count} machines."
-  end
+  include Help
+  include Machine
+  include Image
+  include Container
 end
 
 dc = DockerConsole.new
