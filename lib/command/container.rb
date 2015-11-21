@@ -1,11 +1,7 @@
 module Container
-  def lc
-    list = Docker::Container.all
-    format_container(list)
-    return "Total #{list.count} containers."
-  end
-  def lca
-    list = Docker::Container.all(:all=>true)
+  def lc(cmd=nil)
+    all = (cmd=="-a")? true : false
+    list = Docker::Container.all(:all=>all)
     format_container(list)
     return "Total #{list.count} containers."
   end
