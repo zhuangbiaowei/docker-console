@@ -89,3 +89,17 @@ Number  Name                	URL                         Labels
 tcp://192.168.99.100:2376 > mrun nginx -p 80:80,443:443
 => "Run command at 4 machines."
 ```
+# 3. image commands
+# 3.1. list image
+```
+tcp://192.168.99.100:2376 > li
+ID          	Image                                                       	Tag             	VSize
+fac9d14f6fe0	composerails_web                                            	latest          	914.3 MB
+09897cd2cc05	postgres                                                    	latest          	265.1 MB
+81415e35fc6c	nginx                                                       	latest          	132.7 MB
+6b40fe7724bd	swarm                                                       	1.0.0           	15.6 MB
+6b40fe7724bd	swarm                                                       	latest          	15.6 MB
+0a6ba66e537a	hello-world                                                 	latest          	960 B
+ac90cee00759	ruby                                                        	2.2.0           	774.6 MB
+=> "Total 6 images."
+```
