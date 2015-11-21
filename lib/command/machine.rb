@@ -17,20 +17,21 @@ module Machine
 
   def lm(name="*",label="*")
     @machines = []
-    puts "Number\t#{format_text("Name",20)}\t#{format_text("URL",30)}"
+    puts "Number\t#{format_text("Name",20)}\t#{format_text("URL",30)}\tLabels"
     machines = `ls #{@docker_machine_data}`.split("\n")
     num = 0
     machines.each do |machine|
       f = File.open(File.expand_path(@docker_machine_data)+"/"+machine+"/config.json","r")
       data = f.read
       json = JSON.parse(data)
-      if (name=="*" || machine.include?(name))  && (label=="*" || json["HostOptions"]["Labels"].include?("label"))
+      labels = json["HostOptions"]["EngineOptions"]["Labels"]
+      if (name=="*" || machine.include?(name))  && (label=="*" || labels.include?(label))
         url="tcp://"+json["Driver"]["IPAddress"]+":2376"
         @machines << {
           "name"=>machine,
           "url"=>url
         }
-        puts num.to_s+"\t"+format_text(machine,20)+"\t"+format_text(url,30)
+        puts num.to_s+"\t"+format_text(machine,20)+"\t"+format_text(url,30)+"\t"+labels.join(",")
         num = num + 1
       end
     end
