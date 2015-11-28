@@ -5,6 +5,8 @@ This is a conosle tools for docker!
 ## 0. Quick Start
 
 **First, install docker & docer-machine & ruby!**
+**Ruby >2.0 should be required**
+
 ```
 $ git clone https://github.com/zhuangbiaowei/docker-console
 $ cd docker-console
