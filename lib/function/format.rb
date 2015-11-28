@@ -10,11 +10,6 @@ def human_size(size)
   end
 end
 
-def format_text(str,len)
-  str = str[0..len-3]+".." if str.length > len
-  str+" "*(len-str.length)
-end
-
 def format_machine(machines)
   table = Terminal::Table.new do |t|
     t.headings = ['Number','Name','URL','Labels']
