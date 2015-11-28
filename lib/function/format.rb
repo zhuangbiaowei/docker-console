@@ -1,3 +1,5 @@
+require 'terminal-table'
+
 def human_size(size)
   if size>1000*1000
     return "#{(size/1000.0/1000.0*10).to_i/10.0} MB"
@@ -13,36 +15,47 @@ def format_text(str,len)
   str+" "*(len-str.length)
 end
 
-def format_image(list)
-  puts "#{format_text("ID",8)}\t#{format_text("Image",60)}\t#{format_text("Tag",16)}\t#{format_text("VSize",20)}"
-  list.each do |img|
-    img.info["RepoTags"].each do |rt|
-      repo = rt.split(":")[0..-2].join(":")
-      tag = rt.split(":")[-1]
-      repo=format_text(repo,60)
-      tag=format_text(tag,16)
-      puts img.id[0..11]+"\t"+repo+"\t"+tag+"\t"+human_size(img.info["VirtualSize"])+"\n"
+def format_machine(machines)
+  table = Terminal::Table.new do |t|
+    t.headings = ['Number','Name','URL','Labels']
+    machines.each do |m|
+      t << [m["num"],m["name"],m["url"],m["labels"]]
     end
   end
+  puts table
+end
+
+def format_image(list)
+  table = Terminal::Table.new do |t|
+    t.headings = ['ID','Image','Tag','VSize']
+    list.each do |img|
+      img.info["RepoTags"].each do |rt|
+        t <<  [img.id[0..11], rt.split(":")[0..-2].join(":"), rt.split(":")[-1],human_size(img.info["VirtualSize"])]
+      end
+    end
+  end
+  puts table
 end
 
 def format_container(list)
-  puts "#{format_text("ID",8)}\t#{format_text("Image",20)}\t#{format_text("Name",20)}\t#{format_text("Command",30)}\t#{format_text("Status",20)}\tPort"
-  list.each do |con|
-    id = format_text(con.id[0..7],8)
-    img = format_text(con.info["Image"],20)
-    cmd = format_text(con.info["Command"],30)
-    status = format_text(con.info["Status"],20)
-    name = con.info["Names"][0]
-    name = format_text(name,20)
-    ports = con.info["Ports"]
-    if ports.size>0
-      ports.each do |port|
-        port_str = "#{port["IP"]}:#{port["PrivatePort"]}->#{port["PublicPort"]}/#{port["Type"]}"
-        puts id+"\t"+img+"\t"+name+"\t"+cmd+"\t"+status+"\t"+port_str
+  table = Terminal::Table.new do |t|
+    t.headings = ["ID","Image","Name","Command","Status","Port"]
+    list.each do |con|
+      id = con.id[0..7]
+      img = con.info["Image"]
+      cmd = con.info["Command"]
+      status = con.info["Status"]
+      name = con.info["Names"][0]
+      ports = con.info["Ports"]
+      if ports.size>0
+        ports.each do |port|
+          port_str = "#{port["IP"]}:#{port["PrivatePort"]}->#{port["PublicPort"]}/#{port["Type"]}"
+          t << [id,img,name,cmd,status,port_str]
+        end
+      else
+        t << [id,img,name,cmd,status,""]
       end
-    else
-      puts id+"\t"+img+"\t"+name+"\t"+cmd+"\t"+status
     end
   end
+  puts table
 end

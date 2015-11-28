@@ -8,16 +8,17 @@ module Machine
       f = File.open(File.expand_path(@docker_machine_data)+"/"+machine+"/config.json","r")
       data = f.read
       json = JSON.parse(data)
+      labels = json["HostOptions"]["EngineOptions"]["Labels"]
       @all_machines << {
         "name"=>machine,
-        "url"=>"tcp://"+json["Driver"]["IPAddress"]+":2376"
+        "url"=>"tcp://"+json["Driver"]["IPAddress"]+":2376",
+        "labels"=>labels
       }
     end
   end
 
   def lm(name="*",label="*")
     @machines = []
-    puts "Number\t#{format_text("Name",20)}\t#{format_text("URL",30)}\tLabels"
     machines = `ls #{@docker_machine_data}`.split("\n")
     num = 0
     machines.each do |machine|
@@ -28,13 +29,15 @@ module Machine
       if (name=="*" || machine.include?(name))  && (label=="*" || labels.include?(label))
         url="tcp://"+json["Driver"]["IPAddress"]+":2376"
         @machines << {
-          "name"=>machine,
-          "url"=>url
+          "num" => num,
+          "name" => machine,
+          "url" => url,
+          "labels" => labels.join(",")
         }
-        puts num.to_s+"\t"+format_text(machine,20)+"\t"+format_text(url,30)+"\t"+labels.join(",")
         num = num + 1
       end
     end
+    format_machine(@machines)
     return "Total #{@machines.count} machines."
   end
 

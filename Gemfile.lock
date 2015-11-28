@@ -19,6 +19,7 @@ GEM
       ripl (>= 0.2.9)
     ripl-shell_commands (0.1.0)
       ripl (~> 0.3)
+    terminal-table (1.5.2)
     wirb (2.0.0)
       paint (>= 0.9, < 2.0)
 
@@ -33,6 +34,7 @@ DEPENDENCIES
   ripl-color_streams
   ripl-commands
   ripl-shell_commands
+  terminal-table
 
 BUNDLED WITH
    1.10.6
